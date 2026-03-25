@@ -1,7 +1,7 @@
 # SKILL.md — OpenClaw Skill 命令参考
 
 > 最后更新：2026-03-25
-> 共 13 个 Skill
+> 共 19 个 Skill
 
 ---
 
@@ -22,6 +22,12 @@
 | /线索 /leads | list_leads.js | 查询我的线索列表，支持状态筛选 |
 | /商机 /opps | list_opportunities.js | 查询我的商机列表，支持阶段筛选 |
 | /待办 /todo | my_todo.js | 查看今日待办和逾期提醒 |
+| overtime-list | overtime_list.js | 查询超时预警列表，支持规则类型/级别/状态筛选 |
+| overtime-summary | overtime_summary.js | 超时预警汇总，按规则类型分组展示数量 |
+| overtime-resolve | overtime_resolve.js | 手动解除指定超时预警 |
+| overtime-whitelist | overtime_whitelist.js | 将超时预警加入白名单，暂停通知 |
+| config-overtime | config_overtime.js | 查看或修改超时阈值配置 |
+| config-subscribe | config_subscribe.js | 管理超时通知订阅（查看/新增/删除/重置） |
 
 ---
 
@@ -415,3 +421,218 @@
 - `follow_ups`：待跟进联系人，含 `count` 和 `items`
 - `opportunities`：待处理商机，含 `count` 和 `items`
 - `message`：各组数量的汇总摘要
+
+---
+
+### overtime-list (`overtime_list`)
+
+**描述：** 查询超时预警列表，支持按规则类型、级别和状态筛选。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| type | string | 否 | 规则类型，逗号分隔多个值。可选：`lead_uncontacted` / `customer_no_followup` / `opportunity_stale` / `quote_no_response` / `contract_expiry` / `task_overdue` |
+| level | string | 否 | 预警级别：`warning` 或 `escalated` |
+| status | string | 否 | 预警状态，默认 `active` |
+| page | integer | 否 | 页码，默认1 |
+| pageSize | integer | 否 | 每页条数，默认20，最大100 |
+
+**示例：**
+```json
+{
+  "name": "overtime_list",
+  "arguments": {
+    "type": "lead_uncontacted,customer_no_followup",
+    "level": "warning",
+    "page": 1,
+    "pageSize": 20
+  }
+}
+```
+
+**返回：**
+- `alerts`：预警列表，每项含 `id / entityType / entityName / ruleType / level / overtimeHours / ownerName`
+- `total`：总记录数
+- `page`：当前页码
+- `message`：结果摘要文字
+
+---
+
+### overtime-summary (`overtime_summary`)
+
+**描述：** 获取超时预警汇总统计，按规则类型分组展示各类预警数量。
+
+**参数：** 无
+
+**示例：**
+```json
+{
+  "name": "overtime_summary",
+  "arguments": {}
+}
+```
+
+**返回：**
+- `summary`：分组列表，每项含 `ruleType / total / warning / escalated`
+- `total`：所有类型预警总数
+- `message`：汇总摘要文字
+
+---
+
+### overtime-resolve (`overtime_resolve`)
+
+**描述：** 手动解除指定超时预警记录。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 预警记录 ID |
+
+**示例：**
+```json
+{
+  "name": "overtime_resolve",
+  "arguments": {
+    "id": "alert-123"
+  }
+}
+```
+
+**返回：**
+- `alert`：已解除的预警信息
+- `message`：操作结果提示
+
+---
+
+### overtime-whitelist (`overtime_whitelist`)
+
+**描述：** 将指定超时预警加入白名单，暂停通知一段时间。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 预警记录 ID |
+| durationDays | integer | 是 | 暂停通知天数（1-90天） |
+
+**示例：**
+```json
+{
+  "name": "overtime_whitelist",
+  "arguments": {
+    "id": "alert-123",
+    "durationDays": 7
+  }
+}
+```
+
+**返回：**
+- `alert`：预警信息
+- `expiresAt`：白名单到期时间
+- `message`：操作结果提示，含到期时间
+
+---
+
+### config-overtime (`config_overtime`)
+
+**描述：** 查看或修改超时阈值配置，支持更新指定规则阈值和重置为默认值。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| action | string | 否 | 操作类型：`get`=查看（默认），`reset`=重置为默认 |
+| rule | string | 否 | 规则类型，配合 `hours` 使用来更新阈值 |
+| hours | number | 否 | 提醒阈值（小时），配合 `rule` 使用 |
+| escalationHours | number | 否 | 升级阈值（小时），配合 `rule` 使用（可选） |
+
+**示例 - 查看配置：**
+```json
+{
+  "name": "config_overtime",
+  "arguments": {}
+}
+```
+
+**示例 - 修改规则阈值：**
+```json
+{
+  "name": "config_overtime",
+  "arguments": {
+    "rule": "lead_uncontacted",
+    "hours": 48,
+    "escalationHours": 72
+  }
+}
+```
+
+**示例 - 重置为默认：**
+```json
+{
+  "name": "config_overtime",
+  "arguments": {
+    "action": "reset"
+  }
+}
+```
+
+**返回：**
+- `config`：完整配置数据
+- `rules`（查看时）：格式化规则列表，每项含 `ruleType / enabled / warningHours / escalationHours`
+- `message`：操作结果摘要
+
+---
+
+### config-subscribe (`config_subscribe`)
+
+**描述：** 管理超时通知订阅，支持查看、新增、删除订阅和重置为默认订阅。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| action | string | 是 | 操作类型：`list` / `add` / `remove` / `defaults` |
+| category | string | 否 | 订阅类别（如：`overtime_lead` / `overtime_customer` / ...），action=add 时使用 |
+| scope | string | 否 | 订阅范围：`department` 或 `company`，action=add 时使用 |
+| subscriptionId | string | 否 | 订阅记录 ID，action=remove 时必填 |
+
+**示例 - 查看订阅列表：**
+```json
+{
+  "name": "config_subscribe",
+  "arguments": {
+    "action": "list"
+  }
+}
+```
+
+**示例 - 新增订阅：**
+```json
+{
+  "name": "config_subscribe",
+  "arguments": {
+    "action": "add",
+    "category": "overtime_lead",
+    "scope": "department"
+  }
+}
+```
+
+**示例 - 删除订阅：**
+```json
+{
+  "name": "config_subscribe",
+  "arguments": {
+    "action": "remove",
+    "subscriptionId": "sub-456"
+  }
+}
+```
+
+**返回：**
+- `list`：`subscriptions`（含 `id / category / scope / enabled / createdAt`）和 `total`
+- `add`：`subscription`（新建的订阅记录）
+- `remove`：`message`（操作结果提示）
+- `defaults`：`subscriptions`（重置后的订阅列表）
