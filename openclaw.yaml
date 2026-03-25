@@ -9,6 +9,18 @@ mcpServers:
       DEFAULT_USER_ID: "${DEFAULT_USER_ID}"
 
 cron:
+  daily-report:
+    schedule: "0 9 * * *"
+    timezone: "Asia/Dubai"
+    session: "crm:daily-report"
+    deliver: "announce"
+    prompt: |
+      调用 tarmeer-crm daily_report（period=day），获取今日销售简报原始数据。
+      再调用 tarmeer-crm daily_report 获取订阅了 daily_report 的用户列表（GET /api/mcp/alerts/subscriptions?category=daily_report）。
+      基于原始数据生成自然语言简报，语言与用户最近交互语言一致（中文或英文）。
+      简报要求：1) 突出超时预警和需关注事项；2) 团队表现对比；3) 管道风险；4) 建议行动。
+      按用户渠道偏好分别推送给订阅用户。
+
   daily-sales-brief:
     schedule: "0 9 * * 1-5"
     prompt: |
@@ -20,5 +32,6 @@ cron:
   weekly-report:
     schedule: "0 17 * * 5"
     prompt: |
-      汇总本周销售情况：新增线索数、跟进次数、商机阶段变化。
-      找出本周最大风险和最大机会。
+      调用 tarmeer-crm daily_report（period=week），获取本周销售汇总数据。
+      生成本周销售简报：新增线索数、跟进次数、成单情况、团队排名、管道预测。
+      找出本周最大风险和最大机会，给出下周行动建议。

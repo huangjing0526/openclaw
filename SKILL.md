@@ -1,7 +1,7 @@
 # SKILL.md — OpenClaw Skill 命令参考
 
 > 最后更新：2026-03-25
-> 共 19 个 Skill
+> 共 25 个 Skill
 
 ---
 
@@ -28,6 +28,12 @@
 | overtime-whitelist | overtime_whitelist.js | 将超时预警加入白名单，暂停通知 |
 | config-overtime | config_overtime.js | 查看或修改超时阈值配置 |
 | config-subscribe | config_subscribe.js | 管理超时通知订阅（查看/新增/删除/重置） |
+| daily-report | daily_report.js | 获取日/周/月销售简报原始数据，LLM 生成自然语言摘要 |
+| team-stats | team_stats.js | 团队统计：按人展示跟进数、新增线索、成单金额、超时预警 |
+| individual-stats | individual_stats.js | 个人详情统计：跟进方式分布、成单、当前负载、超时预警 |
+| pipeline-forecast | pipeline_forecast.js | 管道预测：活跃商机总金额、阶段分布、高风险商机列表 |
+| reassign | reassign.js | 将指定线索/客户重新分配给其他销售（需部门级或以上权限） |
+| bulk-reassign | bulk_reassign.js | 批量重新分配：先 preview 确认，再执行（支持超时筛选） |
 
 ---
 
@@ -636,3 +642,194 @@
 - `add`：`subscription`（新建的订阅记录）
 - `remove`：`message`（操作结果提示）
 - `defaults`：`subscriptions`（重置后的订阅列表）
+
+---
+
+### daily-report (`daily_report`)
+
+**描述：** 获取销售简报原始数据（alerts / metrics / teamRanking / pipeline），由 LLM 生成自然语言摘要，突出异常和需关注事项。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| period | string | 否 | 报告周期：`day`（默认）/ `week` / `month` |
+| date | string | 否 | 日期 YYYY-MM-DD，默认今天 |
+
+**示例：**
+```json
+{
+  "name": "daily_report",
+  "arguments": { "period": "day" }
+}
+```
+
+**返回：**
+- `alerts`：超时预警（lead_overtime / customer_overtime / opportunity_overtime / task_overdue）
+- `metrics`：新线索 / 联系线索 / 新客户 / 跟进次数 / 成单
+- `teamRanking`：各成员跟进数、成单金额、超时数排名
+- `pipeline`：forecastAmount / topOpportunities / riskOpportunities
+
+---
+
+### team-stats (`team_stats`)
+
+**描述：** 获取团队统计数据，按人展示周期内的跟进数、新增线索、成单金额、超时预警数。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| period | string | 否 | 统计周期：`day` / `week`（默认）/ `month` |
+| date | string | 否 | 日期 YYYY-MM-DD，默认今天 |
+
+**示例：**
+```json
+{
+  "name": "team_stats",
+  "arguments": { "period": "week" }
+}
+```
+
+**返回：**
+- `members`：成员列表，每项含 `userId / name / followups / newLeads / closedDeals / closedAmount / overtimeCount`
+- `startDate / endDate`：统计区间
+
+---
+
+### individual-stats (`individual_stats`)
+
+**描述：** 获取指定销售人员的详情统计，包括跟进方式分布、成单情况、当前负载和超时预警。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | string | 是 | 目标用户 ID |
+| period | string | 否 | 统计周期：`day` / `week` / `month`（默认） |
+| date | string | 否 | 日期 YYYY-MM-DD，默认今天 |
+
+**示例：**
+```json
+{
+  "name": "individual_stats",
+  "arguments": {
+    "user_id": "user-zhangsan",
+    "period": "month"
+  }
+}
+```
+
+**返回：**
+- `followups`：含 `total / byMethod / byResult`
+- `newLeads`：新增线索数
+- `closedDeals`：含 `count / amount`
+- `currentLoad`：含 `activeLeads / activeCustomers`
+- `overtimeAlerts`：含 `total / byType`
+
+---
+
+### pipeline-forecast (`pipeline_forecast`)
+
+**描述：** 获取销售管道预测，展示活跃商机总金额、各阶段分布和高风险商机列表。
+
+**参数：** 无
+
+**示例：**
+```json
+{
+  "name": "pipeline_forecast",
+  "arguments": {}
+}
+```
+
+**返回：**
+- `totalForecast`：管道总金额
+- `byStage`：各阶段 `count / amount`
+- `opportunities`：商机列表，含 `id / name / stage / amount / ownerName / daysSinceFollowup / daysToClose / isAtRisk`
+
+---
+
+### reassign (`reassign`)
+
+**描述：** 将指定线索或客户重新分配给其他销售人员，需部门级（dataRange≥1）权限，操作记入日志并通知双方。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| entity_type | string | 是 | `leads` 或 `customers` |
+| entity_id | string | 是 | 实体 ID |
+| to_user_id | string | 是 | 目标负责人 ID |
+| reason | string | 否 | 重新分配原因 |
+
+**示例：**
+```json
+{
+  "name": "reassign",
+  "arguments": {
+    "entity_type": "leads",
+    "entity_id": "lead-001",
+    "to_user_id": "user-wangwu",
+    "reason": "超时未跟进"
+  }
+}
+```
+
+**返回：**
+- `entityId / entityType / fromUserId / toUserId`
+- `message`：操作结果提示
+
+---
+
+### bulk-reassign (`bulk_reassign`)
+
+**描述：** 批量将某销售人员的线索/客户重新分配给另一人，支持状态筛选和超时筛选。默认先返回预览（preview=true），确认后再执行。
+
+**参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| entity_type | string | 是 | `leads` 或 `customers` |
+| from_user_id | string | 是 | 原负责人 ID |
+| to_user_id | string | 是 | 目标负责人 ID |
+| status | string | 否 | 状态筛选，逗号分隔（如 `new,following`） |
+| overtime_only | boolean | 否 | 仅超时实体，默认 false |
+| preview | boolean | 否 | true=仅预览（默认），false=执行 |
+
+**示例 - 预览：**
+```json
+{
+  "name": "bulk_reassign",
+  "arguments": {
+    "entity_type": "leads",
+    "from_user_id": "user-lisi",
+    "to_user_id": "user-wangwu",
+    "overtime_only": true,
+    "preview": true
+  }
+}
+```
+
+**示例 - 执行：**
+```json
+{
+  "name": "bulk_reassign",
+  "arguments": {
+    "entity_type": "leads",
+    "from_user_id": "user-lisi",
+    "to_user_id": "user-wangwu",
+    "overtime_only": true,
+    "preview": false
+  }
+}
+```
+
+**返回（preview=true）：**
+- `total`：影响条数
+- `items`：列表，每项含 `id / name / overtimeHours`
+- `message`：确认提示文字
+
+**返回（preview=false）：**
+- `count`：实际执行条数
+- `message`：完成提示
