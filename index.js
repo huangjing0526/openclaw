@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const sdkPath = require('path').join(__dirname, 'node_modules/@modelcontextprotocol/sdk/dist/cjs/types.js');
+const { ListToolsRequestSchema, CallToolRequestSchema } = require(sdkPath);
 const { loadSkills } = require('./lib/skill-loader');
 
 // 创建MCP Server
@@ -16,16 +18,16 @@ const server = new Server(
   }
 );
 
-// 动态加载所有Skills
-const skills = loadSkills('./skills');
+// 动态加载所有Skills（使用绝对路径，确保从任意 cwd 启动都能找到）
+const skills = loadSkills(require('path').join(__dirname, 'skills'));
 
-console.log(`[MCP Server] Loaded ${skills.length} skills:`);
+console.error(`[MCP Server] Loaded ${skills.length} skills:`);
 skills.forEach(skill => {
-  console.log(`  - ${skill.name}: ${skill.description}`);
+  console.error(`  - ${skill.name}: ${skill.description}`);
 });
 
 // 注册工具列表处理器
-server.setRequestHandler('tools/list', async () => {
+server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: skills.map(skill => ({
       name: skill.name,
@@ -36,7 +38,7 @@ server.setRequestHandler('tools/list', async () => {
 });
 
 // 注册工具调用处理器
-server.setRequestHandler('tools/call', async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   // 查找对应的Skill
@@ -86,7 +88,7 @@ server.setRequestHandler('tools/call', async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.log('[MCP Server] Started with stdio transport');
+  console.error('[MCP Server] Started with stdio transport');
 }
 
 main().catch(error => {

@@ -80,36 +80,23 @@ Add to your OpenClaw configuration (`~/.openclaw/config.json`):
 
 ## Available Skills
 
-### search_customer
+> 详细说明请参阅 [SKILL.md](./SKILL.md)
 
-Search for customers by name, company, or phone number.
-
-```javascript
-{
-  "name": "search_customer",
-  "arguments": {
-    "query": "华为",
-    "type": "customer",
-    "pageSize": 10,
-    "_context": {
-      "tenantId": "tenant-123",
-      "userId": "user-456"
-    }
-  }
-}
-```
-
-### get_customer
-
-Get detailed information about a specific customer.
-
-### create_followup
-
-Create a followup record for a customer or lead.
-
-### list_followups
-
-Get followup history for a customer or lead.
+| 命令 | Skill | 描述 |
+|------|-------|------|
+| /搜索客户 | search_customer | 按姓名、公司名或电话模糊搜索客户/线索 |
+| /客户详情 | get_customer | 获取指定客户的详细信息 |
+| /新建客户 | create_customer | 创建新客户 |
+| /新建线索 | create_lead | 创建新线索 |
+| /线索详情 | get_lead | 获取指定线索的详细信息 |
+| /新建跟进 | create_followup | 创建客户或线索的跟进记录 |
+| /跟进记录 | list_followups | 获取客户或线索的跟进记录列表 |
+| /待跟进 | list_upcoming_followups | 获取待跟进的客户/线索列表（含已逾期） |
+| /跟进建议 | suggest_followup | AI 分析跟进内容，建议结果和下次时间 |
+| /跟进总结 | summarize_followups | AI 总结跟进历史，生成摘要和建议 |
+| /线索 /leads | list_leads | 查询我的线索列表，支持状态筛选 |
+| /商机 /opps | list_opportunities | 查询我的商机列表，支持阶段筛选 |
+| /待办 /todo | my_todo | 查看今日待办和逾期提醒 |
 
 ## Development
 
